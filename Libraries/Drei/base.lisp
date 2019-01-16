@@ -273,9 +273,8 @@ constituent character of the line."
         (loop with indentation = 0
            as object = (object-after mark2)
            until (end-of-buffer-p mark2)
-           while (or (eql object #\Space) (eql object #\Tab))
-           do (incf indentation
-                    (if (eql (object-after mark2) #\Tab) tab-width 1))
+           while (eql object (or #\Tab #\Space))
+           do (incf indentation)
            (incf (offset mark2))
            finally (return indentation)))))
 
@@ -297,11 +296,9 @@ characters in the region between offset1 and offset2."
 (defun buffer-display-column (buffer offset tab-width)
   (let ((line-start-offset (- offset (buffer-column-number buffer offset))))
     (loop with column = 0
-       for i from line-start-offset below offset
-       do (incf column (if (eql (buffer-object buffer i) #\Tab)
-                           (- tab-width (mod column tab-width))
-                           1))
-       finally (return column))))
+	  for i from line-start-offset below offset
+	  do (incf column)
+	  finally (return column))))
 
 (defgeneric number-of-lines-in-region (mark1 mark2)
   (:documentation "Return the number of lines (or rather the
@@ -741,21 +738,36 @@ It is acceptable to pass an offset in place of one of the marks."))
 
 (defun tabify-buffer-region (buffer offset1 offset2 tab-width)
   (flet ((looking-at-spaces (buffer offset count)
-           (loop for i from offset
-              repeat count
-              unless (char= (buffer-object buffer i) #\Space)
-              return nil
-              finally (return t))))
+			    (loop for i from offset
+				  repeat count
+				  unless (char= (buffer-object buffer i) #\Space)
+				  return nil
+				  finally (return t))))
+	
     (loop for offset = offset1 then (1+ offset)
        until (>= offset offset2)
        do (let* ((column (buffer-display-column
                           buffer offset tab-width))
-                 (count (- tab-width (mod column tab-width))))
+                 (count (cond
+			 ((and (> tab-width 0) (> column 0))
+			  (- tab-width (mod column tab-width)))
+			 ((and (= tab-width 0) (> column 0))
+			  (- column (mod tab-width column)))
+			 (t (if tab-width tab-width (* space-width 8))))))
+	    
+	    (when (>= count 1)
+	      (decf offset count)
+	      (decf offset2 (1- count)))
+	    
             (when (looking-at-spaces buffer offset count)
-              (finish-output)
+	      (finish-output)
               (delete-buffer-range buffer offset count)
-              (insert-buffer-object buffer offset #\Tab)
-              (decf offset2 (1- count)))))))
+	      (insert-buffer-object buffer offset #\Tab))))))
+;	      (incf offset2)
+;	      (incf offset 2)
+;	      (loop repeat 2 do
+;		    (insert-buffer-object buffer offset #\Tab)))))))
+	      
 
 (defgeneric tabify-region (mark1 mark2 tab-width)
   (:documentation "Replace sequences of tab-width spaces with tabs
@@ -785,12 +797,12 @@ in the region delimited by mark1 and mark2."))
      do (let* ((column (buffer-display-column buffer
                                               offset
                                               tab-width))
-               (count (- tab-width (mod column tab-width))))
-          (delete-buffer-range buffer offset 1)
+               (count (if (= tab-width 0) 0 (- tab-width (mod column tab-width)))))
+          (delete-buffer-range buffer offset count)
           (loop repeat count
              do (insert-buffer-object buffer offset #\Space))
-          (incf offset (1- count))
-          (incf offset2 (1- count)))))
+          (incf offset count)
+          (incf offset2 count))))
 
 (defgeneric untabify-region (mark1 mark2 tab-width)
   (:documentation "Replace tabs with tab-width spaces in the region
