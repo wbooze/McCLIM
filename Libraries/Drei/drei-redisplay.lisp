@@ -512,7 +512,7 @@ of the stroke."
      for (start end object) in parts
      do (cond 
 	 ((eql object #\Tab)
-	  (setf width 
+	  (incf width 
 		(next-tab-stop stream (stream-default-view stream)
 			       (+ width x-position)))
 	  (vector-push-extend width widths))
