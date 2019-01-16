@@ -1,3 +1,5 @@
+McCLIM fork for pinning down some issues related to tabification/views and climacs interaction without deleting tabification related methods in views.lisp in Drei. Affected files so far are: Libraries/Drei/views.lisp|base.lisp|drei-redisplay.lisp 
+
 # ![logo](https://common-lisp.net/project/mcclim/img/mcclim.png)
 
 ## [McCLIM](https://common-lisp.net/project/mcclim/) Version 0.9.8-dev post-"Imbolc"
