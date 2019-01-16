@@ -511,11 +511,17 @@ of the stroke."
      with widths = (make-array 1 :adjustable t :fill-pointer t :initial-element 0)
      for (start end object) in parts
      do (cond 
-	 ((object
-	   (incf width 
-		 (next-tab-stop stream (stream-default-view stream)
-				(+ width x-position)))
-	   (vector-push-extend width widths)))
+	 ((eql object #\Tab)
+	  (setf width 
+		(next-tab-stop stream (stream-default-view stream)
+			       (+ width x-position)))
+	  (vector-push-extend width widths))
+	 
+	 (object
+	  (multiple-value-bind (w)
+			       (text-size stream object :text-style text-style)
+			       (incf width w)
+			       (vector-push-extend width widths)))
 	 (t
 	  (multiple-value-bind (w)
 			       (text-size stream stroke-string

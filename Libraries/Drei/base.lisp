@@ -753,7 +753,7 @@ It is acceptable to pass an offset in place of one of the marks."))
 			  (- tab-width (mod column tab-width)))
 			 ((and (= tab-width 0) (> column 0))
 			  (- column (mod tab-width column)))
-			 (t (if tab-width tab-width (* space-width 8))))))
+			 (t tab-width))))
 	    
 	    (when (>= count 1)
 	      (decf offset count)
