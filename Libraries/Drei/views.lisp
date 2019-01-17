@@ -67,6 +67,7 @@ invoking the debugger)."))
 	       :documentation "A list of tab-stops in device units.
 If empty, tabs every TAB-WIDTH are assumed.")))
 
+
 (defun maybe-update-recordings (stream tabify)
   (with-accessors ((space-width recorded-space-width)
                    (tab-width recorded-tab-width)
@@ -83,25 +84,27 @@ If empty, tabs every TAB-WIDTH are assumed.")))
   (:method ((stream extended-output-stream) (tabify tabify-mixin))
 	   (maybe-update-recordings stream tabify)
 	   (cond 
-	    ((and (recorded-tab-width tabify) (or (not (recorded-space-width tabify)) (= 0 (recorded-space-width tabify))))
+	    ((and (recorded-tab-width tabify) (or (not (recorded-space-width tabify)) (= (recorded-space-width tabify) 0)))
 	     (/ (recorded-tab-width tabify) (tab-space-count tabify)))
-	    ((and (not (recorded-tab-width tabify) (or (not (recorded-space-width tabify)) (= 0 (recorded-space-width tabify)))))
+	    ((and (not (recorded-tab-width tabify) (or (not (recorded-space-width tabify)) (= (recorded-space-width tabify) 0))))
 	     (if (tab-space-count tabify) (tab-space-count tabify) 8))
-	    (t
-	     (recorded-space-width tabify)))))
+	    (t (if (use-tabs tabify)
+		   (/ (tab-width stream tabify) (tab-space-count tabify))
+		   (space-width stream tabify))))))
 
 (defgeneric tab-width (stream tabify)
   (:documentation "Return the width of a tab character on
 `stream' in device units (most likely pixels).")
   (:method ((stream extended-output-stream) (tabify tabify-mixin))
 	   (maybe-update-recordings stream tabify)
-	   (if (use-tabs tabify)
-	       (if (or (not (recorded-tab-width tabify)) (= 0 (recorded-tab-width tabify)))
-		   (* (tab-space-count tabify) (space-width stream tabify))
-		 (recorded-tab-width tabify))
-	     (if (and (recorded-tab-width tabify) (/= 0 (recorded-tab-width tabify)))
-		 (recorded-tab-width tabify)
-	       (* (tab-space-count tabify) (space-width stream tabify))))))
+	   (cond
+	    ((use-tabs tabify)
+	       (cond
+		((or (not (recorded-tab-width tabify)) (= 0 (recorded-tab-width tabify)))
+		 (* (tab-space-count tabify) (space-width stream tabify)))
+		((and (recorded-tab-width tabify) (/= 0 (recorded-tab-width tabify)))
+		 (recorded-tab-width tabify))))
+	     (t (* (tab-space-count tabify) (space-width stream tabify))))))
 
 (defgeneric next-tab-stop (stream tabify x)
   (:documentation "Return the distance to the next tab-stop after `x'
@@ -114,13 +117,12 @@ on `stream' in device units (most likely pixels).")
 			      (- width (mod x width)))
 			     ((and (>= width 0) (> x 0))
 			      (- x (mod width x)))
-			     (t (tab-width stream tabify)))))
-		 
-		 
+			     ((and width x (= width x))
+			      0)
+			     (t 0))))
 					;(if (recorded-tab-width tabify) 
 					;	    (recorded-tab-width tabify)
 					;	  (* (tab-space-count tabify) (space-width stream tabify)))))))
-		 
 		 (if (tab-stops tabify)
 		     (let ((next (find-if (lambda (pos) (> pos x)) (tab-stops tabify))))
 		       (or (round-up x (tab-width stream tabify)) (and next (- next x))))

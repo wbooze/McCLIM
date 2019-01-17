@@ -753,7 +753,9 @@ It is acceptable to pass an offset in place of one of the marks."))
 			  (- tab-width (mod column tab-width)))
 			 ((and (= tab-width 0) (> column 0))
 			  (- column (mod tab-width column)))
-			 (t tab-width))))
+			 ((and tab-width column (= tab-width column))
+			  0)
+			 (t 0))))
 	    
 	    (when (>= count 1)
 	      (decf offset count)
@@ -763,11 +765,6 @@ It is acceptable to pass an offset in place of one of the marks."))
 	      (finish-output)
               (delete-buffer-range buffer offset count)
 	      (insert-buffer-object buffer offset #\Tab))))))
-;	      (incf offset2)
-;	      (incf offset 2)
-;	      (loop repeat 2 do
-;		    (insert-buffer-object buffer offset #\Tab)))))))
-	      
 
 (defgeneric tabify-region (mark1 mark2 tab-width)
   (:documentation "Replace sequences of tab-width spaces with tabs
@@ -797,7 +794,13 @@ in the region delimited by mark1 and mark2."))
      do (let* ((column (buffer-display-column buffer
                                               offset
                                               tab-width))
-               (count (if (= tab-width 0) 0 (- tab-width (mod column tab-width)))))
+               (count
+		(cond
+		 ((and (> tab-width 0) (> column 0))
+		  (- tab-width (mod column tab-width)))
+		 ((and (= tab-width 0) (> column 0))
+		  (- column (mod tab-width column)))
+		 (t (if tab-width (* tab-width) (if space-width (* space-width 8) 8))))))
           (delete-buffer-range buffer offset count)
           (loop repeat count
              do (insert-buffer-object buffer offset #\Space))

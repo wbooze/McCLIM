@@ -510,13 +510,14 @@ of the stroke."
      with width = 0
      with widths = (make-array 1 :adjustable t :fill-pointer t :initial-element 0)
      for (start end object) in parts
-     do (cond 
+     do (cond
 	 ((eql object #\Tab)
-	  (incf width 
+	  (incf width
 		(next-tab-stop stream (stream-default-view stream)
-			       (+ width x-position)))
+			       (if (= width x-position)
+				   0
+				 x-position)))
 	  (vector-push-extend width widths))
-	 
 	 (object
 	  (multiple-value-bind (w)
 			       (text-size stream object :text-style text-style)
